@@ -2,5 +2,6 @@
 __pycache__/
 *.py[cod]
 face_id.jpg
+IMG_0670.jpeg
 .deepface/
 runs/

@@ -4,7 +4,7 @@ import cv2
 from deepface import DeepFace
 
 
-FACE_ID = Path(__file__).resolve().parent / "face_id.jpg"
+FACE_ID = Path(__file__).resolve().parent / "IMG_0670.jpeg"
 
 
 def main():
@@ -20,7 +20,7 @@ def main():
 			img1_path=reference_image,
 			img2_path=reference_image,
 			enforce_detection=True,
-			detector_backend="opencv",
+			detector_backend="retinaface",
 		)
 		print("Imagem de referência carregada e rosto detectado.")
 	except Exception as error:
@@ -34,8 +34,8 @@ def main():
 		raise RuntimeError("Não foi possível abrir a câmera. Verifique a conexão e as permissões.")
 
 	frame_count = 0
-	status = "Aguardando rosto..."
-	is_match = False
+	status_acesso = "AGUARDANDO LEITURA"
+	cor_status = (0, 200, 255)
 
 	try:
 		while True:
@@ -45,28 +45,31 @@ def main():
 				break
 
 			frame_count += 1
-			if frame_count % 15 == 0:
+			if frame_count % 30 == 0:
 				try:
 					result = DeepFace.verify(
 						img1_path=reference_image,
 						img2_path=frame,
 						enforce_detection=True,
-						detector_backend="opencv",
+						detector_backend="retinaface",
 					)
-					is_match = result["verified"]
-					status = "Rosto reconhecido" if is_match else "Rosto não reconhecido"
-				except ValueError:
-					is_match = False
-					status = "Nenhum rosto detectado"
+					if result["verified"]:
+						status_acesso = "ACESSO LIBERADO"
+						cor_status = (0, 255, 0)
+					else:
+						status_acesso = "ACESSO NEGADO"
+						cor_status = (0, 0, 255)
+				except Exception:
+					status_acesso = "ERRO DE LEITURA"
+					cor_status = (0, 165, 255)
 
-			color = (0, 180, 0) if is_match else (0, 0, 220)
 			cv2.putText(
 				frame,
-				status,
-				(20, 40),
+				status_acesso,
+				(30, 50),
 				cv2.FONT_HERSHEY_SIMPLEX,
-				0.8,
-				color,
+				1.0,
+				cor_status,
 				2,
 			)
 			cv2.putText(
