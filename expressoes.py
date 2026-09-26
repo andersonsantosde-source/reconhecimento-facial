@@ -23,6 +23,13 @@ RACE_TRANSLATIONS = {
 	"middle eastern": "Oriente Médio",
 	"latino hispanic": "Latina/hispânica",
 }
+COLOR_PANEL = (24, 30, 32)
+COLOR_TEXT = (235, 240, 238)
+COLOR_MUTED = (160, 174, 170)
+COLOR_WOMAN = (190, 105, 255)
+COLOR_MAN = (255, 150, 55)
+COLOR_UNKNOWN = (150, 160, 160)
+GENDER_COLORS = {"Mulher": COLOR_WOMAN, "Homem": COLOR_MAN}
 
 
 def analyze_face_attributes(roi_color):
@@ -49,6 +56,60 @@ def analyze_face_attributes(roi_color):
 		"gender": GENDER_TRANSLATIONS.get(dominant_gender.lower(), dominant_gender),
 		"race": RACE_TRANSLATIONS.get(dominant_race.lower(), dominant_race),
 	}
+
+
+def draw_badge(frame, text, x, y, accent, scale=0.46):
+	font = cv2.FONT_HERSHEY_SIMPLEX
+	(text_width, text_height), baseline = cv2.getTextSize(text, font, scale, 1)
+	padding_x, padding_y = 9, 6
+	box_width = text_width + padding_x * 2 + 4
+	box_height = text_height + baseline + padding_y * 2
+	frame_height, frame_width = frame.shape[:2]
+	x = min(max(8, x), max(8, frame_width - box_width - 8))
+	y = min(max(8, y), max(8, frame_height - box_height - 8))
+
+	cv2.rectangle(frame, (x, y), (x + box_width, y + box_height), COLOR_PANEL, -1)
+	cv2.rectangle(frame, (x, y), (x + 3, y + box_height), accent, -1)
+	cv2.putText(
+		frame,
+		text,
+		(x + padding_x + 3, y + padding_y + text_height),
+		font,
+		scale,
+		COLOR_TEXT,
+		1,
+		cv2.LINE_AA,
+	)
+	return box_height
+
+
+def draw_camera_header(frame, face_count):
+	header_height = 38
+	shade = frame.copy()
+	cv2.rectangle(shade, (0, 0), (frame.shape[1], header_height), COLOR_PANEL, -1)
+	cv2.addWeighted(shade, 0.86, frame, 0.14, 0, frame)
+	cv2.putText(
+		frame,
+		"ANALISE FACIAL  /  CAMERA ATIVA",
+		(14, 24),
+		cv2.FONT_HERSHEY_SIMPLEX,
+		0.52,
+		COLOR_TEXT,
+		1,
+		cv2.LINE_AA,
+	)
+	status = f"ROSTOS: {face_count}  |  Q: SAIR"
+	(text_width, _), _ = cv2.getTextSize(status, cv2.FONT_HERSHEY_SIMPLEX, 0.46, 1)
+	cv2.putText(
+		frame,
+		status,
+		(max(14, frame.shape[1] - text_width - 14), 24),
+		cv2.FONT_HERSHEY_SIMPLEX,
+		0.46,
+		COLOR_MUTED,
+		1,
+		cv2.LINE_AA,
+	)
 
 
 def main():
@@ -88,13 +149,6 @@ def main():
 				attributes_by_face = []
 
 			for face_index, (x, y, width, height) in enumerate(faces):
-				cv2.rectangle(
-					frame,
-					(x, y),
-					(x + width, y + height),
-					(0, 255, 0),
-					2,
-				)
 				roi_color = frame[y : y + height, x : x + width]
 				if frame_count % ANALYSIS_INTERVAL == 0:
 					try:
@@ -106,30 +160,43 @@ def main():
 				if face_index < len(attributes_by_face):
 					attributes = attributes_by_face[face_index]
 					if attributes is None:
-						labels = ["Analise indisponivel"]
+						labels = [("ANALISE INDISPONIVEL", COLOR_UNKNOWN)]
 					else:
 						labels = [
-							f"Emocao: {attributes['emotion']} ({attributes['emotion_confidence']:.0f}%)",
-							f"Idade aparente: {attributes['age']}",
-							f"Genero estimado: {attributes['gender']}",
-							f"Categoria racial estimada: {attributes['race']}",
+							(
+								f"EMOCAO  {attributes['emotion']}  {attributes['emotion_confidence']:.0f}%",
+								COLOR_MUTED,
+							),
+							(f"IDADE APARENTE  {attributes['age']}", COLOR_MUTED),
+							(
+								f"GENERO ESTIMADO  {attributes['gender']}",
+								GENDER_COLORS.get(attributes["gender"], COLOR_UNKNOWN),
+							),
+							(f"CATEGORIA RACIAL  {attributes['race']}", COLOR_MUTED),
 						]
 				else:
-					labels = ["Analisando atributos..."]
+					attributes = None
+					labels = [("ANALISANDO ATRIBUTOS...", COLOR_UNKNOWN)]
 
-				label_y = max(y - 10, 20)
-				for label_index, label in enumerate(labels):
-					cv2.putText(
-						frame,
-						label,
-						(x, label_y + label_index * 20),
-						cv2.FONT_HERSHEY_SIMPLEX,
-						0.5,
-						(0, 255, 0),
-						2,
-						cv2.LINE_AA,
-					)
+				gender_color = (
+					GENDER_COLORS.get(attributes["gender"], COLOR_UNKNOWN)
+					if attributes is not None
+					else COLOR_UNKNOWN
+				)
+				cv2.rectangle(
+					frame,
+					(x, y),
+					(x + width, y + height),
+					gender_color,
+					2,
+				)
 
+				badge_y = y + height + 7
+				for label, accent in labels:
+					badge_height = draw_badge(frame, label, x, badge_y, accent)
+					badge_y += badge_height + 4
+
+			draw_camera_header(frame, len(faces))
 			if len(faces) == 0:
 				attributes_by_face = []
 
