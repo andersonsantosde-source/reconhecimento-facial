@@ -24,4 +24,6 @@ python -m pip install -r requirements.txt
 python reconhecimento_facial.py
 ```
 
-Feche a janela da câmera pressionando `Q`. A aprovação é automática e não exige tecla; o áudio é tocado quando o estado muda para liberado ou negado. Na primeira execução, o programa baixa os modelos leves do MediaPipe e do SFace para a pasta do usuário.
+Feche a janela da câmera pressionando `Q`. Para cadastrar alguém, mantenha o rosto visível na câmera, pressione `N` e informe o nome; o programa registra o rosto do quadro atual. Nomes duplicados são recusados. A aprovação é automática e não exige tecla; o áudio é tocado quando o estado muda para liberado ou negado.
+
+Os nomes e vetores biométricos são armazenados localmente em `%USERPROFILE%\.mediapipe\reconhecimento-facial\users.sqlite3`. A imagem capturada para cadastro não é guardada. Proteja a conta do Windows e permita cadastro somente em um posto confiável. Na primeira execução, o perfil existente da imagem `IMG_0670.jpeg` é adicionado como `Perfil Principal`; os modelos leves do MediaPipe e SFace são baixados para a pasta do usuário.
